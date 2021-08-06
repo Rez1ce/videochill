@@ -42,6 +42,8 @@
     }
   },
   "dependencies": {
+    "@electron/remote": "^1.2.1",
+    "bulma": "^0.9.3",
     "electron-squirrel-startup": "^1.0.0"
   },
   "devDependencies": {
