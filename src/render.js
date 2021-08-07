@@ -28,6 +28,9 @@ async function getVideoSources(){
     videoOptionsMenu.popup();
 }
 
+let mediaRecorder; // Capture footage
+const recordedChunks = [];
+
 // Change videoSource window to record
 async function selectSource(source){
     videoSelectBtn.innerText = source.name;
@@ -49,6 +52,51 @@ const stream = await navigator.mediaDevices.getUserMedia(constraints);
 videoElement.srcObject = stream;
 videoElement.play();
 
+
+// Create media recorder
+const options = { mimeType: 'video/webm; codecs=vp9' };
+mediaRecorder = new MediaRecorder(stream, options);
+
+// Register event handlers
+mediaRecorder.ondataavailable = handlerDataAvailable;
+mediaRecorder.onstop = handlerStop;
+
+}
+// Capture all chunks
+function handlerDataAvailable(e){
+    console.log('video data available');
+    recordedChunks.push(e.data);
 }
 
+const { dialog } = require('@electron/remote');
+const { writeFile } = require('fs');
+// Saves video file on stop
+async function handlerStop(e){
+    const blob = new Blob(recordedChunks, {
+        type: 'video/webm; codecs=vp9'
+    });
 
+    const buffer = Buffer.from(await blob.arrayBuffer());
+
+    const { filePath } = await dialog.showSaveDialog({
+        buttonLabel: 'Save video',
+        defaultPath: `vid-${Intl.DateTimeFormat().format(Date.now())}.webm`
+    });
+
+    console.log(filePath);
+
+    writeFile(filePath, buffer, () => console.log('video saved!'));
+
+}
+
+startBtn.onclick = e => {
+  mediaRecorder.start();
+  startBtn.classList.add('is-danger');
+  startBtn.innerText = 'Recording';
+};
+
+stopBtn.onclick = e => {
+  mediaRecorder.stop();
+  startBtn.classList.remove('is-danger');
+  startBtn.innerText = 'Start';
+};
