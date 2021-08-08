@@ -6,7 +6,7 @@ const videoSelectBtn = document.getElementById('VideoSelectBtn');
 videoSelectBtn.onclick = getVideoSources;
 
 // Node.js modules
-const { desktopCapturer} = require('@electron/remote');
+const { desktopCapturer } = require('@electron/remote');
 
 const { Menu } = require('@electron/remote');
 
@@ -28,8 +28,9 @@ async function getVideoSources(){
     videoOptionsMenu.popup();
 }
 
+let flag = false;
 let mediaRecorder; // Capture footage
-const recordedChunks = [];
+let recordedChunks = [];
 
 // Change videoSource window to record
 async function selectSource(source){
@@ -47,21 +48,29 @@ async function selectSource(source){
 
 // Create stream
 const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
+const options = { mimeType: 'video/webm; codecs=vp9' };
 // Preview the source in a video
 videoElement.srcObject = stream;
 videoElement.play();
 
-
-// Create media recorder
-const options = { mimeType: 'video/webm; codecs=vp9' };
+if (mediaRecorder != undefined && mediaRecorder.state == 'recording'){
+    flag = true;
+    mediaRecorder.requestData();
+}
 mediaRecorder = new MediaRecorder(stream, options);
+// Create media recorder
+
+if (flag){
+    mediaRecorder.start();
+    flag = false;
+}
 
 // Register event handlers
 mediaRecorder.ondataavailable = handlerDataAvailable;
 mediaRecorder.onstop = handlerStop;
 
 }
+
 // Capture all chunks
 function handlerDataAvailable(e){
     console.log('video data available');
@@ -76,7 +85,7 @@ async function handlerStop(e){
         type: 'video/webm; codecs=vp9'
     });
 
-    const buffer = Buffer.from(await blob.arrayBuffer());
+    let buffer = Buffer.from(await blob.arrayBuffer());
 
     const { filePath } = await dialog.showSaveDialog({
         buttonLabel: 'Save video',
@@ -86,7 +95,8 @@ async function handlerStop(e){
     console.log(filePath);
 
     writeFile(filePath, buffer, () => console.log('video saved!'));
-
+    recordedChunks = [];
+    buffer = null;
 }
 
 startBtn.onclick = e => {
